@@ -744,20 +744,38 @@ function renderCard(grid, repo) {
     `;
   }
 
-  card.addEventListener('mousemove', e => {
-    const r = card.getBoundingClientRect();
-    const x = e.clientX - r.left, y = e.clientY - r.top;
-    const cx = r.width / 2, cy = r.height / 2;
-    const rotX = ((y - cy) / cy) * -8;
-    const rotY = ((x - cx) / cx) *  8;
-    card.style.transform = `perspective(800px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale(1.02)`;
-  });
-  card.addEventListener('mouseleave', () => {
-    card.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg) scale(1)';
-    card.style.transition = 'transform 0.4s ease, border-color 0.2s, box-shadow 0.2s';
-  });
+  let tRX = 0, tRY = 0, cRX = 0, cRY = 0, raf = null, savedRect = null;
+  function tickCard() {
+    cRX += (tRX - cRX) * 0.12;
+    cRY += (tRY - cRY) * 0.12;
+    card.style.transform = `perspective(800px) rotateX(${cRX.toFixed(3)}deg) rotateY(${cRY.toFixed(3)}deg)`;
+    if (Math.abs(tRX - cRX) > 0.02 || Math.abs(tRY - cRY) > 0.02) {
+      raf = requestAnimationFrame(tickCard);
+    } else {
+      card.style.transform = `perspective(800px) rotateX(${tRX}deg) rotateY(${tRY}deg)`;
+      raf = null;
+    }
+  }
+  function onDocMove(e) {
+    if (!savedRect) return;
+    const inside = e.clientX >= savedRect.left && e.clientX <= savedRect.right &&
+                   e.clientY >= savedRect.top  && e.clientY <= savedRect.bottom;
+    if (inside) {
+      tRX = ((e.clientY - savedRect.top  - savedRect.height/2) / (savedRect.height/2)) * -8;
+      tRY = ((e.clientX - savedRect.left - savedRect.width/2)  / (savedRect.width/2))  *  8;
+    } else {
+      tRX = 0; tRY = 0;
+      savedRect = null;
+      document.removeEventListener('mousemove', onDocMove);
+    }
+    if (!raf) raf = requestAnimationFrame(tickCard);
+  }
   card.addEventListener('mouseenter', () => {
-    card.style.transition = 'transform 0.1s ease, border-color 0.2s, box-shadow 0.2s';
+    card.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg)';
+    cRX = 0; cRY = 0;
+    savedRect = card.getBoundingClientRect();
+    document.removeEventListener('mousemove', onDocMove);
+    document.addEventListener('mousemove', onDocMove);
   });
 
   grid.appendChild(card);
