@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seth Tenenbaum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0c12;
+    --surface: rgba(22, 25, 38, 0.85);
+    --border: rgba(60, 65, 90, 0.5);
+    --accent: #4f8ef7;
+    --accent2: #8b5cf6;
+    --text: #e2e4ed;
+    --muted: #7c809a;
+    --tag-bg: rgba(20, 22, 35, 0.9);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--bg);
+    overflow-x: hidden;
+  }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ── Background canvas ── */
+  #bg {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+  }
+
+  .vignette {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 50% 40%, transparent 20%, rgba(10,12,18,0.75) 80%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .fog-layer {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 55%;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to top, black 0%, black 28%, rgba(0,0,0,0.3) 65%, transparent 100%);
+    mask-image:         linear-gradient(to top, black 0%, black 28%, rgba(0,0,0,0.3) 65%, transparent 100%);
+  }
+
+  .fog-blob {
+    position: absolute;
+    border-radius: 50%;
+    bottom: -60px;
+    animation: fogRise ease-in-out infinite;
+  }
+
+  @keyframes fogRise {
+    0%   { transform: translateY(0)    translateX(0px);  opacity: 0.9; }
+    25%  { transform: translateY(-12%) translateX(18px); opacity: 0.7; }
+    55%  { transform: translateY(-32%) translateX(-12px);opacity: 0.35;}
+    80%  { transform: translateY(-55%) translateX(10px); opacity: 0.1; }
+    100% { transform: translateY(-75%) translateX(0px);  opacity: 0;   }
+  }
+
+  #lightning {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .orb-glow {
+    position: fixed;
+    top: 50%; left: 50%;
+    pointer-events: none;
+    border-radius: 50%;
+    z-index: 1;
+  }
+  /* tight inner bloom — color driven by JS */
+  .orb-glow-inner {
+    width: 480px; height: 480px;
+    transform: translate(-50%, -52%);
+    filter: blur(28px);
+    animation: orbPulse 5s ease-in-out infinite alternate;
+  }
+  /* wide outer haze — color driven by JS */
+  .orb-glow-outer {
+    width: 820px; height: 820px;
+    transform: translate(-50%, -52%);
+    filter: blur(50px);
+    animation: orbPulse 7s ease-in-out infinite alternate-reverse;
+  }
+  @keyframes orbPulse {
+    from { opacity: 0.55; }
+    to   { opacity: 1.00; }
+  }
+
+  /* ── Layout ── */
+  .container {
+    position: relative;
+    z-index: 3;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 90px 0 64px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 3rem;
+    font-weight: 600;
+    letter-spacing: -1px;
+    margin-bottom: 14px;
+    line-height: 1.4;
+    perspective: 260px;
+    transform-style: preserve-3d;
+  }
+
+  .bio-panel {
+    display: inline-block;
+    background: rgba(8, 10, 20, 0.62);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(80, 120, 255, 0.14);
+    border-radius: 12px;
+    padding: 20px 26px 18px;
+    margin-bottom: 0;
+    max-width: 580px;
+  }
+
+  .bio {
+    font-size: 1.05rem;
+    color: var(--muted);
+    margin-bottom: 18px;
+    line-height: 1.75;
+  }
+
+  .header-links {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+
+  .header-links a {
+    font-size: 0.88rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: color 0.15s;
+  }
+
+  .header-links a:hover { color: var(--accent); text-decoration: none; }
+
+  /* ── Section ── */
+  section { padding: 60px 0; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+
+  .section-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 36px;
+  }
+
+  /* ── Cards ── */
+  .projects {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 18px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    transform-style: preserve-3d;
+    will-change: transform;
+    cursor: default;
+  }
+
+  .card:hover {
+    border-color: rgba(79, 142, 247, 0.5);
+    box-shadow: 0 8px 40px rgba(79, 142, 247, 0.12);
+  }
+
+  /* ── Hero card (blackjack) ── */
+  .card-hero {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, rgba(20,24,42,0.95) 0%, rgba(28,22,46,0.95) 100%);
+    border-color: rgba(139, 92, 246, 0.4);
+    flex-direction: row;
+    align-items: center;
+    gap: 28px;
+    padding: 30px 32px;
+  }
+
+  .card-hero:hover {
+    border-color: rgba(139, 92, 246, 0.7);
+    box-shadow: 0 8px 48px rgba(139, 92, 246, 0.18);
+  }
+
+  .card-hero-suits {
+    font-size: 2.2rem;
+    line-height: 1;
+    letter-spacing: 6px;
+    flex-shrink: 0;
+    opacity: 0.9;
+  }
+
+  .card-hero-suits .red { color: #e05555; }
+  .card-hero-suits .blk { color: #d0d4e8; }
+
+  .card-hero .card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .card-hero h3 { font-size: 1.15rem; }
+
+  @media (max-width: 600px) {
+    .card-hero { flex-direction: column; align-items: flex-start; }
+    .card-hero-suits { font-size: 1.6rem; letter-spacing: 4px; }
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .fork-badge {
+    font-size: 0.68rem;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 7px;
+    margin-left: 7px;
+    vertical-align: middle;
+  }
+
+  .card-links { display: flex; gap: 8px; flex-shrink: 0; }
+
+  .card-links a {
+    font-size: 0.76rem;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 10px;
+    transition: color 0.15s, border-color 0.15s;
+    backdrop-filter: blur(4px);
+  }
+
+  .card-links a:hover { color: var(--accent); border-color: var(--accent); text-decoration: none; }
+
+  .card p {
+    font-size: 0.88rem;
+    color: var(--muted);
+    line-height: 1.65;
+    flex: 1;
+  }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .lang-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 4px;
+    flex-shrink: 0;
+  }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .tag {
+    font-size: 0.73rem;
+    background: var(--tag-bg);
+    color: var(--muted);
+    border-radius: 5px;
+    padding: 2px 9px;
+    border: 1px solid var(--border);
+  }
+
+  /* loading skeleton */
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface) 25%, rgba(40,44,60,0.5) 50%, var(--surface) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: 8px;
+    height: 160px;
+  }
+
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  /* ── Skills ── */
+  .skills-panel {
+    display: inline-block;
+    background: rgba(8, 10, 20, 0.62);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(80, 120, 255, 0.14);
+    border-radius: 12px;
+    padding: 20px 26px;
+  }
+
+  .skills-list {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 12px 24px;
+  }
+
+  .skills-list .label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+    padding-top: 2px;
+  }
+
+  .skills-list .value { font-size: 0.88rem; color: var(--text); opacity: 0.8; }
+
+  /* ── Footer ── */
+  footer {
+    padding: 40px 0;
+    text-align: center;
+    font-size: 0.84rem;
+    color: var(--muted);
+    position: relative;
+    z-index: 2;
+  }
+
+  @media (max-width: 600px) {
+    header { padding: 60px 0 40px; }
+    header h1 { font-size: 2.2rem; }
+    .projects { grid-template-columns: 1fr; }
+    .skills-list { grid-template-columns: 1fr; gap: 4px; }
+    .skills-list .label { margin-top: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+<canvas id="lightning"></canvas>
+<div class="orb-glow orb-glow-outer" id="orb-outer"></div>
+<div class="orb-glow orb-glow-inner" id="orb-inner"></div>
+<div class="vignette"></div>
+<div class="fog-layer">
+  <div class="fog-blob" style="width:640px;height:200px;left:-8%;  background:rgba(32,0,62,0.52); filter:blur(72px); animation-duration:34s;animation-delay:-4s"></div>
+  <div class="fog-blob" style="width:520px;height:175px;left:12%;  background:rgba(10,0,82,0.48); filter:blur(80px); animation-duration:40s;animation-delay:-14s"></div>
+  <div class="fog-blob" style="width:700px;height:215px;left:38%;  background:rgba(38,0,58,0.44); filter:blur(66px); animation-duration:29s;animation-delay:-22s"></div>
+  <div class="fog-blob" style="width:460px;height:165px;left:62%;  background:rgba(62,0,32,0.32); filter:blur(76px); animation-duration:44s;animation-delay:-8s"></div>
+  <div class="fog-blob" style="width:580px;height:188px;left:-3%;  background:rgba(18,0,72,0.46); filter:blur(70px); animation-duration:36s;animation-delay:-27s"></div>
+  <div class="fog-blob" style="width:620px;height:198px;left:28%;  background:rgba(48,0,48,0.38); filter:blur(68px); animation-duration:31s;animation-delay:-16s"></div>
+  <div class="fog-blob" style="width:490px;height:172px;left:72%;  background:rgba(8,8,88,0.44);  filter:blur(84px); animation-duration:46s;animation-delay:-32s"></div>
+  <div class="fog-blob" style="width:560px;height:183px;left:48%;  background:rgba(28,0,68,0.50); filter:blur(62px); animation-duration:38s;animation-delay:-19s"></div>
+  <div class="fog-blob" style="width:410px;height:155px;left:82%;  background:rgba(72,0,28,0.28); filter:blur(78px); animation-duration:42s;animation-delay:-7s"></div>
+</div>
+
+<div class="container">
+
+  <header>
+    <h1 id="name-3d"></h1>
+    <div class="bio-panel">
+      <p class="bio">
+        Full-stack software engineer with 20+ years of experience across web, mobile, and blockchain.
+        Deep background in JavaScript, React, and TypeScript, with production work in Solidity and Web3.
+        I like hard problems and shipping things that work.
+      </p>
+      <div class="header-links">
+        <a href="https://github.com/sethTenenbaum" target="_blank">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          github.com/sethTenenbaum
+        </a>
+        <a href="mailto:sethtenenbaum@protonmail.com">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          sethtenenbaum@protonmail.com
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <div class="section-label">Projects</div>
+    <div id="projects-grid" class="projects">
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-label">Skills</div>
+    <div class="skills-panel">
+      <div class="skills-list">
+        <span class="label">Languages</span>
+        <span class="value">JavaScript (ES6+), TypeScript, Python, Swift, C/C++, Ruby, SQL, Solidity, Java</span>
+        <span class="label">Frontend</span>
+        <span class="value">React, Next.js, Angular, HTML5, CSS3, SASS, Canvas API, SwiftUI</span>
+        <span class="label">Backend</span>
+        <span class="value">Node.js, Deno, Ruby on Rails, PHP, Go, Apache, Linux</span>
+        <span class="label">Blockchain</span>
+        <span class="value">Solidity, Hardhat, Foundry, Web3.js, Viem, Chainlink VRF, UUPS upgradeable contracts</span>
+        <span class="label">Data / AI</span>
+        <span class="value">TensorFlow, Keras, NumPy, statistical modeling</span>
+        <span class="label">Databases</span>
+        <span class="value">MongoDB, PostgreSQL, MSSQL, Oracle SQL</span>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="bio-panel" style="font-size:0.82rem; color:var(--muted);">
+      Seth Tenenbaum &nbsp;·&nbsp; Plainview, NY
+    </div>
+  </footer>
+
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.158.0/build/three.module.js"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const canvas = document.getElementById('bg');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x0a0c12, 1);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.z = 6;
+
+const N = 5000;
+
+function sampleGeo(geo, n) {
+  const pos = geo.attributes.position;
+  const count = pos.count;
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const idx = Math.floor(Math.random() * count);
+    const x = pos.getX(idx), y = pos.getY(idx), z = pos.getZ(idx);
+    const r = Math.sqrt(x*x + y*y + z*z) || 1;
+    const phi   = Math.acos(Math.max(-1, Math.min(1, z / r)));
+    const theta = Math.atan2(y, x) + Math.PI;
+    pts.push({ x, y, z, key: phi * Math.PI * 2 + theta });
+  }
+  pts.sort((a, b) => a.key - b.key);
+  const arr = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    arr[i*3] = pts[i].x; arr[i*3+1] = pts[i].y; arr[i*3+2] = pts[i].z;
+  }
+  return arr;
+}
+
+const states = [
+  sampleGeo(new THREE.SphereGeometry(2.6, 128, 128), N),
+  sampleGeo(new THREE.TorusKnotGeometry(1.8, 0.55, 400, 32), N),
+  sampleGeo(new THREE.IcosahedronGeometry(2.6, 8), N),
+  sampleGeo(new THREE.TorusGeometry(2.2, 0.7, 64, 200), N),
+];
+
+// Match name palette: ~75% blue, ~15% yellow, ~10% red
+const colors = new Float32Array(N * 3);
+for (let i = 0; i < N; i++) {
+  const r = Math.random();
+  if (r < 0.75) {
+    const v = Math.random();
+    colors[i*3]   = 0.12 + v * 0.14;   // blue: low red
+    colors[i*3+1] = 0.46 + v * 0.20;   // blue: mid green
+    colors[i*3+2] = 0.88 + v * 0.12;   // blue: high blue
+  } else if (r < 0.88) {
+    const v = Math.random();
+    colors[i*3]   = 0.90 + v * 0.08;   // yellow: high red
+    colors[i*3+1] = 0.76 + v * 0.10;   // yellow: high green
+    colors[i*3+2] = 0.08 + v * 0.10;   // yellow: low blue
+  } else {
+    const v = Math.random();
+    colors[i*3]   = 0.86 + v * 0.10;   // red: high red
+    colors[i*3+1] = 0.10 + v * 0.10;   // red: low green
+    colors[i*3+2] = 0.12 + v * 0.10;   // red: low blue
+  }
+}
+
+const geo = new THREE.BufferGeometry();
+geo.setAttribute('position', new THREE.BufferAttribute(states[0].slice(), 3));
+geo.setAttribute('color',    new THREE.BufferAttribute(colors, 3));
+
+function getUScale() {
+  // projects world-unit size to screen pixels with perspective
+  return window.innerHeight * camera.projectionMatrix.elements[5] * 0.5;
+}
+
+const mat = new THREE.ShaderMaterial({
+  uniforms: {
+    uScale: { value: 0 }, // set after camera is ready
+  },
+  vertexShader: `
+    attribute vec3 color;
+    uniform float uScale;
+    varying vec3 vColor;
+    void main() {
+      vColor = color;
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      gl_PointSize = 0.085 * uScale / -mv.z;
+      gl_Position = projectionMatrix * mv;
+    }
+  `,
+  fragmentShader: `
+    varying vec3 vColor;
+    void main() {
+      vec2 uv = gl_PointCoord - 0.5;
+      float r = length(uv);
+      if (r > 0.5) discard;
+      float core  = (1.0 - smoothstep(0.00, 0.18, r)) * 0.75;
+      float mid   = (1.0 - smoothstep(0.12, 0.40, r)) * 0.28;
+      float halo  = (1.0 - smoothstep(0.30, 0.50, r)) * 0.07;
+      float glow  = clamp(core + mid + halo, 0.0, 1.0);
+      gl_FragColor = vec4(vColor * glow, 1.0);
+    }
+  `,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+  transparent: true,
+});
+
+const points = new THREE.Points(geo, mat);
+scene.add(points);
+camera.updateProjectionMatrix();
+mat.uniforms.uScale.value = getUScale();
+
+let fromState = 0, toState = 1, morphT = 0;
+let phase = 'hold', holdTimer = 0;
+const HOLD_FRAMES = 120, TRANS_FRAMES = 200;
+
+function easeInOut(t) { return t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t; }
+
+const orbInner = document.getElementById('orb-inner');
+const orbOuter = document.getElementById('orb-outer');
+const ORB_BLUE = [52, 120, 255], ORB_YELL = [248, 210, 38], ORB_RED = [238, 52, 52];
+
+function orbColor(t) {
+  const yAmt = Math.pow(Math.max(0, Math.sin(t * 0.14)), 10) * 0.45;
+  const rAmt = Math.pow(Math.max(0, Math.sin(t * 0.14 + Math.PI)), 10) * 0.45;
+  const base = 1 - yAmt - rAmt;
+  return [
+    Math.round(ORB_BLUE[0]*base + ORB_YELL[0]*yAmt + ORB_RED[0]*rAmt),
+    Math.round(ORB_BLUE[1]*base + ORB_YELL[1]*yAmt + ORB_RED[1]*rAmt),
+    Math.round(ORB_BLUE[2]*base + ORB_YELL[2]*yAmt + ORB_RED[2]*rAmt),
+  ];
+}
+
+function animateBg() {
+  requestAnimationFrame(animateBg);
+  points.rotation.y += 0.0018;
+  points.rotation.x += 0.0007;
+  points.rotation.z += 0.0004;
+
+  const t = performance.now() * 0.001;
+  const [cr, cg, cb] = orbColor(t);
+  orbInner.style.background = `radial-gradient(ellipse,
+    rgba(${cr},${cg},${cb},0.38) 0%,
+    rgba(${cr},${cg},${cb},0.18) 35%,
+    rgba(${cr},${cg},${cb},0.06) 65%,
+    transparent 100%)`;
+  orbOuter.style.background = `radial-gradient(ellipse,
+    rgba(${cr},${cg},${cb},0.12) 0%,
+    rgba(${cr},${cg},${cb},0.07) 45%,
+    rgba(${cr},${cg},${cb},0.02) 70%,
+    transparent 100%)`;
+
+  if (phase === 'hold') {
+    if (++holdTimer > HOLD_FRAMES) { phase = 'transition'; morphT = 0; }
+  } else {
+    morphT += 1 / TRANS_FRAMES;
+    const done = morphT >= 1;
+    if (done) morphT = 1;
+    const e = easeInOut(morphT);
+    const from = states[fromState], to = states[toState];
+    const arr = geo.attributes.position.array;
+    for (let i = 0; i < N * 3; i++) arr[i] = from[i] + (to[i] - from[i]) * e;
+    geo.attributes.position.needsUpdate = true;
+    if (done) {
+      fromState = toState;
+      toState = (toState + 1) % states.length;
+      phase = 'hold'; holdTimer = 0;
+    }
+  }
+
+  renderer.render(scene, camera);
+}
+animateBg();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  mat.uniforms.uScale.value = getUScale();
+});
+
+document.addEventListener('mousemove', e => {
+  const x = (e.clientX / window.innerWidth  - 0.5) * 0.4;
+  points.rotation.y += (x - points.rotation.y) * 0.02;
+});
+
+// ── GitHub repos ──────────────────────────────────────────────────────────
+
+const LANG_COLORS = {
+  JavaScript: '#f7df1e', TypeScript: '#3178c6', Python: '#3572A5',
+  Swift: '#F05138', Solidity: '#AA6746', Ruby: '#701516',
+  'C++': '#f34b7d', Go: '#00ADD8', HTML: '#e34c26', CSS: '#563d7c',
+  Shell: '#89e051', Rust: '#dea584',
+};
+
+const FEATURED = {
+  'polygon-blackjack':       { desc: 'Fully on-chain Blackjack on Polygon using Chainlink VRF for provably fair randomness and UUPS upgradeable contracts. Includes a custom on-chain treasury that dynamically maintains liquidity for concurrent players. React / Next.js / TypeScript frontend with smooth card animations.', live: 'https://polygon-blackjack.vercel.app', hero: true, noGithub: true, language: 'TypeScript' },
+  'iCloudClean':             { desc: 'Native macOS app for visualizing and cleaning iCloud Drive storage using an interactive squarified treemap. Concurrent scanning, delete/download queues, and app container scanning.', live: null },
+  'drummy-nsynth':           { desc: 'Synthesizes novel drum sounds using a Variational Autoencoder trained on the NSynth dataset, sampling the learned latent space of percussive instruments.', live: null },
+  'bitcoin-decode-address':  { desc: 'Bitcoin chain explorer that decodes addresses across multiple encoding formats including Base58Check, Bech32, and P2SH.', live: null },
+  'gerizim-paper-a':         { desc: 'Statistical analysis framework for peer-reviewed archaeological research. Implements circular statistics, permutation tests, FDR correction, and NPC joint periodogram methods.', live: null },
+  'viem':                    { desc: 'Open-source contribution to Viem — the TypeScript library for Ethereum interaction used across the Web3 ecosystem.', live: null },
+  'recon-extension':         { desc: 'Contributed to Recon Fuzz Tester, a security extension for Web3 smart contract analysis.', live: null },
+};
+
+async function loadRepos() {
+  const grid = document.getElementById('projects-grid');
+  try {
+    const res = await fetch('https://api.github.com/users/SethTenenbaum/repos?sort=updated&per_page=100');
+    const repos = await res.json();
+    const featuredNames = Object.keys(FEATURED);
+    const featured = featuredNames
+      .map(name => {
+        const found = repos.find(r => r.name === name);
+        if (found) return found;
+        // always show hero cards even when the repo is private
+        const info = FEATURED[name];
+        if (info.hero) return { name, html_url: null, language: info.language || null, stargazers_count: 0, fork: false, description: '' };
+        return null;
+      })
+      .filter(Boolean);
+    const others = repos
+      .filter(r => !featuredNames.includes(r.name) && !r.fork)
+      .sort((a, b) => b.stargazers_count - a.stargazers_count);
+    const all = [...featured, ...others];
+    grid.innerHTML = '';
+    all.forEach(repo => renderCard(grid, repo));
+  } catch (e) {
+    grid.innerHTML = '<p style="color:var(--muted)">Could not load repos — check your connection.</p>';
+  }
+}
+
+function renderCard(grid, repo) {
+  const info = FEATURED[repo.name] || {};
+  const desc = info.desc || repo.description || '';
+  const live = info.live || repo.homepage || null;
+  const color = LANG_COLORS[repo.language] || '#8b8fa8';
+  const isHero = !!info.hero;
+
+  const card = document.createElement('div');
+  card.className = isHero ? 'card card-hero' : 'card';
+
+  if (isHero) {
+    const showGithub = repo.html_url && !info.noGithub;
+    card.innerHTML = `
+      <div class="card-hero-suits">
+        <span class="blk">♠</span><span class="red">♥</span><span class="red">♦</span><span class="blk">♣</span>
+      </div>
+      <div class="card-body">
+        <div class="card-header">
+          <h3>${repo.name}</h3>
+          <div class="card-links">
+            ${showGithub ? `<a href="${repo.html_url}" target="_blank">GitHub</a>` : ''}
+            ${live ? `<a href="${live}" target="_blank">Live ↗</a>` : ''}
+          </div>
+        </div>
+        ${desc ? `<p>${desc}</p>` : ''}
+        <div class="card-meta">
+          ${repo.language ? `<span><span class="lang-dot" style="background:${color}"></span>${repo.language}</span>` : ''}
+          ${repo.stargazers_count > 0 ? `<span>★ ${repo.stargazers_count}</span>` : ''}
+        </div>
+      </div>
+    `;
+  } else {
+    card.innerHTML = `
+      <div class="card-header">
+        <h3>${repo.name}${repo.fork ? '<span class="fork-badge">fork</span>' : ''}</h3>
+        <div class="card-links">
+          <a href="${repo.html_url}" target="_blank">GitHub</a>
+          ${live ? `<a href="${live}" target="_blank">Live</a>` : ''}
+        </div>
+      </div>
+      ${desc ? `<p>${desc}</p>` : ''}
+      <div class="card-meta">
+        ${repo.language ? `<span><span class="lang-dot" style="background:${color}"></span>${repo.language}</span>` : ''}
+        ${repo.stargazers_count > 0 ? `<span>★ ${repo.stargazers_count}</span>` : ''}
+      </div>
+    `;
+  }
+
+  card.addEventListener('mousemove', e => {
+    const r = card.getBoundingClientRect();
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    const cx = r.width / 2, cy = r.height / 2;
+    const rotX = ((y - cy) / cy) * -8;
+    const rotY = ((x - cx) / cx) *  8;
+    card.style.transform = `perspective(800px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale(1.02)`;
+  });
+  card.addEventListener('mouseleave', () => {
+    card.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg) scale(1)';
+    card.style.transition = 'transform 0.4s ease, border-color 0.2s, box-shadow 0.2s';
+  });
+  card.addEventListener('mouseenter', () => {
+    card.style.transition = 'transform 0.1s ease, border-color 0.2s, box-shadow 0.2s';
+  });
+
+  grid.appendChild(card);
+}
+
+loadRepos();
+</script>
+
+<script>
+// ── 3D extruded letter animation ──────────────────────────────────────────
+(function() {
+  var h1 = document.getElementById('name-3d');
+  var text = 'Seth Tenenbaum';
+
+  var BLUE = [52,  142, 250];
+  var YELL = [248, 210,  38];
+  var RED  = [238,  52,  52];
+  var CENTER = (text.length - 1) / 2;
+
+  // sin(t) and sin(t+π) are always opposite sign, so yellow and red
+  // can never be active at the same time. sin^6 gives brief soft peaks.
+  // The radial factor fades the highlight toward the edges so only the
+  // center of the name picks up the color — the edges stay blue.
+  function getColor(t, i) {
+    var yAmt = Math.pow(Math.max(0,  Math.sin(t * 0.14)),           10) * 0.38;
+    var rAmt = Math.pow(Math.max(0,  Math.sin(t * 0.14 + Math.PI)), 10) * 0.38;
+    var radial = Math.pow(1 - Math.abs(i - CENTER) / CENTER, 1.8);
+    yAmt *= radial;
+    rAmt *= radial;
+    var base = 1 - yAmt - rAmt;
+    return [
+      Math.round(BLUE[0]*base + YELL[0]*yAmt + RED[0]*rAmt),
+      Math.round(BLUE[1]*base + YELL[1]*yAmt + RED[1]*rAmt),
+      Math.round(BLUE[2]*base + YELL[2]*yAmt + RED[2]*rAmt),
+    ];
+  }
+
+  function extrusion(r, g, b) {
+    var parts = [];
+    for (var i = 1; i <= 8; i++) {
+      var dim = Math.max(0, 0.68 - i * 0.07);
+      parts.push(
+        (i * 0.55).toFixed(1) + 'px ' +
+        (i * 0.82).toFixed(1) + 'px 0 rgba(' +
+        Math.round(r * dim * 0.40) + ',' +
+        Math.round(g * dim * 0.28) + ',' +
+        Math.round(b * dim * 0.50) + ',0.88)'
+      );
+    }
+    parts.push('6px 10px 14px rgba(0,0,0,0.50)');
+    return parts.join(',');
+  }
+
+  var isLetter = [];
+  var spans = [];
+
+  for (var idx = 0; idx < text.length; idx++) {
+    var ch = text[idx];
+    var s = document.createElement('span');
+    s.style.display = 'inline-block';
+    s.style.willChange = 'transform, filter';
+    if (ch === ' ') {
+      s.innerHTML = '&nbsp;';
+      isLetter.push(false);
+    } else {
+      s.textContent = ch;
+      isLetter.push(true);
+    }
+    h1.appendChild(s);
+    spans.push(s);
+  }
+
+  function animate(ts) {
+    requestAnimationFrame(animate);
+    var t = ts * 0.001;
+    for (var i = 0; i < spans.length; i++) {
+      if (!isLetter[i]) continue;
+      var ph = i * 0.42;
+
+      var ry = Math.sin(t * 0.40 + ph)        *  4;
+      var rx = Math.sin(t * 0.28 + ph * 1.30) *  2;
+      var rz = Math.sin(t * 0.20 + ph * 0.72) *  1.2;
+      var ty = Math.sin(t * 0.24 + ph * 0.85) *  1.5;
+      var tz = Math.sin(t * 0.33 + ph * 1.10) *  5;
+
+      spans[i].style.transform =
+        'rotateY(' + ry.toFixed(2) + 'deg)' +
+        ' rotateX(' + rx.toFixed(2) + 'deg)' +
+        ' rotateZ(' + rz.toFixed(2) + 'deg)' +
+        ' translateY(' + ty.toFixed(2) + 'px)' +
+        ' translateZ(' + tz.toFixed(2) + 'px)';
+
+      var col = getColor(t, i);
+      spans[i].style.color = 'rgb(' + col[0] + ',' + col[1] + ',' + col[2] + ')';
+      spans[i].style.textShadow = extrusion(col[0], col[1], col[2]);
+
+      var depthNorm  = (tz + 5) / 10;
+      var brightness = (0.60 + depthNorm * 0.55).toFixed(2);
+      var blurPx     = ((1 - depthNorm) * 1.2).toFixed(1);
+      var glowAlpha  = (0.2 + depthNorm * 0.75).toFixed(2);
+      var glowSize   = Math.round(3 + depthNorm * 18);
+
+      spans[i].style.filter =
+        'blur(' + blurPx + 'px)' +
+        ' brightness(' + brightness + ')' +
+        ' drop-shadow(0 0 ' + glowSize + 'px rgba(' +
+          col[0] + ',' + col[1] + ',' + col[2] + ',' + glowAlpha + '))';
+    }
+  }
+  requestAnimationFrame(animate);
+})();
+</script>
+<script>
+(function() {
+  var cvs = document.getElementById('lightning');
+  var ctx = cvs.getContext('2d');
+  var bolts = [];
+
+  function resize() {
+    var dpr = window.devicePixelRatio || 1;
+    cvs.width  = innerWidth  * dpr;
+    cvs.height = innerHeight * dpr;
+    cvs.style.width  = innerWidth  + 'px';
+    cvs.style.height = innerHeight + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Relatively straight jagged path — small perpendicular spread
+  function makePath(sx, sy, ex, ey, segs, spreadMul) {
+    spreadMul = spreadMul || 1;
+    var pts = [{x:sx,y:sy}];
+    var dx=ex-sx, dy=ey-sy;
+    var len=Math.sqrt(dx*dx+dy*dy)||1;
+    var nx=-dy/len, ny=dx/len;
+    for (var i=1; i<segs; i++) {
+      var t=i/segs;
+      var spread=len*0.07*spreadMul;
+      var off=(Math.random()-0.5)*2*spread;
+      pts.push({x:sx+dx*t+nx*off, y:sy+dy*t+ny*off});
+    }
+    pts.push({x:ex,y:ey});
+    return pts;
+  }
+
+  // Recursive branching — all branches point toward center with a small veer.
+  // 3 levels deep: branches off the trunk, sub-branches off those, and tertiary.
+  function makeBranches(pts, cx, cy, depth) {
+    depth = depth || 0;
+    if (depth > 2) return [];
+    var num = depth===0 ? 6+Math.floor(Math.random()*5)
+            : depth===1 ? 4+Math.floor(Math.random()*4)
+            :             2+Math.floor(Math.random()*3);
+    var branches = [];
+    var n = pts.length;
+    for (var b=0; b<num; b++) {
+      var idx = 1+Math.floor(Math.random()*(n-2));
+      var p = pts[idx];
+      // angle pointing from this point TOWARD center
+      var toCX=cx-p.x, toCY=cy-p.y;
+      var towardCenter=Math.atan2(toCY,toCX);
+      var veer=(Math.random()>0.5?1:-1)*(0.15+Math.random()*0.35);
+      var bAngle=towardCenter+veer;
+      var distToCenter=Math.sqrt(toCX*toCX+toCY*toCY);
+      var bLen=distToCenter*(0.08+Math.random()*0.14);
+      var bPts=makePath(p.x,p.y, p.x+Math.cos(bAngle)*bLen, p.y+Math.sin(bAngle)*bLen,
+                        10+Math.floor(Math.random()*6), 1.3);
+      branches.push({
+        pts:    bPts,
+        startT: idx/(n-1),
+        w:      Math.max(0.10, 0.26-depth*0.07),
+        children: Math.random()<(0.85-depth*0.20) ? makeBranches(bPts,cx,cy,depth+1) : [],
+      });
+    }
+    return branches;
+  }
+
+  function drawBranches(list, alpha, r, g, b) {
+    for (var k=0; k<list.length; k++) {
+      var br=list[k];
+      var a=alpha*Math.pow(1-br.startT,1.2)*0.72;
+      drawPath(br.pts, a, br.w, r, g, b);
+      if (br.children.length) drawBranches(br.children, a, r, g, b);
+    }
+  }
+
+  function spawn() {
+    var W=innerWidth, H=innerHeight;
+    // center of the morphing object in screen space
+    var cx=W*0.5, cy=H*0.46;
+
+    // random angle from center
+    var angle=Math.random()*Math.PI*2;
+    var cosA=Math.cos(angle), sinA=Math.sin(angle);
+
+    // start: trace ray from center to viewport edge
+    var txPos = cosA>0 ? (W-cx)/cosA : cosA<0 ? -cx/cosA : 1e9;
+    var tyPos = sinA>0 ? (H-cy)/sinA : sinA<0 ? -cy/sinA : 1e9;
+    var tEdge = Math.min(txPos, tyPos);
+    var sx=cx+cosA*tEdge, sy=cy+sinA*tEdge;
+
+    // end: stop before center — bolt fades out at 18-30% viewport radius
+    var minDim=Math.min(W,H);
+    var endR=minDim*(0.18+Math.random()*0.12);
+    var ex=cx+cosA*endR, ey=cy+sinA*endR;
+
+    var isBlue=Math.random()<0.72;
+    var mainPts=makePath(sx,sy,ex,ey, 38+Math.floor(Math.random()*14));
+    var spreadVecs=mainPts.map(function(){
+      var a=Math.random()*Math.PI*2;
+      var d=14+Math.random()*26;
+      return {dx:Math.cos(a)*d, dy:Math.sin(a)*d};
+    });
+    // outward unit vector (center → edge) used for tip bounce
+    var edgeDist=Math.sqrt((sx-cx)*(sx-cx)+(sy-cy)*(sy-cy))||1;
+    bolts.push({
+      pts: mainPts,
+      spreadVecs: spreadVecs,
+      bounceDir: {dx:(sx-cx)/edgeDist, dy:(sy-cy)/edgeDist},
+      branches: makeBranches(mainPts,cx,cy),
+      age:0, dur:1000+Math.random()*800,
+      r:isBlue?62:100, g:isBlue?150:68, b:255,
+      w:0.5+Math.random()*0.45,
+      cx:cx, cy:cy,
+    });
+  }
+
+  // draw a path segment-by-segment fading from base→tip.
+  // Draws particles (glowing balls) along path points.
+  // boltT: directional fade-out when > T_OUT (back dissolves first, front last).
+  function drawPath(pts, alpha, w, r, g, b, boltT, spreadVecs, bouncePhase, bounceDir, age, fwdX, fwdY) {
+    var n = pts.length;
+    if (n < 1) return;
+    var T_OUT = 0.55;
+    var baseR = 2.0 + w * 2.5;
+    var T_IN = 0.10;
+    var spreadT = 0;
+    if (boltT !== undefined) {
+      if (boltT < T_IN) {
+        var s = 1 - boltT / T_IN;
+        spreadT = -(s * s); // negative = inward compression, ease-out as it snaps to path
+      } else if (boltT > T_OUT) {
+        var s = (boltT - T_OUT) / (1 - T_OUT);
+        spreadT = s * s;    // positive = outward dispersal, ease-in as it dissolves
+      }
+    }
+
+    for (var j = 0; j < n; j++) {
+      var segT = j / Math.max(1, n - 1);
+      var fade = Math.pow(1 - segT, 1.8);
+      var a = alpha * fade;
+
+      if (boltT !== undefined && boltT > T_OUT) {
+        var dp = (boltT - T_OUT) / (1 - T_OUT);
+        var localD = (dp - segT * 0.55) / 0.45;
+        a *= Math.max(0, 1 - Math.max(0, Math.min(1, localD)));
+      }
+
+      if (a < 0.003) continue;
+
+      var sv = spreadVecs ? spreadVecs[j] : null;
+      var px = pts[j].x + (sv ? sv.dx * spreadT : 0) + (fwdX||0);
+      var py = pts[j].y + (sv ? sv.dy * spreadT : 0) + (fwdY||0);
+      // bounce: only the contact zone (front ~35%) scatters and fades
+      if (bouncePhase >= 0 && bounceDir && segT > 0.65) {
+        var cf = (segT - 0.65) / 0.35;          // 0→1 within contact zone
+        var bsin = Math.sin(bouncePhase * Math.PI);
+        px += bounceDir.dx * bsin * 65 * cf;
+        py += bounceDir.dy * bsin * 65 * cf;
+        // brief flash then quick fade — gone before the rest of the bolt dissolves
+        a = (a + bsin * 0.20 * cf) * Math.max(0, 1 - bouncePhase * 1.9);
+      }
+
+      var cr = baseR * (0.35 + 0.65 * Math.pow(fade, 0.25));
+
+      ctx.beginPath();
+      ctx.arc(px, py, cr * 5.5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba('+r+','+g+','+b+','+(a*0.04).toFixed(3)+')';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(px, py, cr * 2.4, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba('+r+','+g+','+b+','+(a*0.16).toFixed(3)+')';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(px, py, cr, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba('+r+','+g+','+b+','+a.toFixed(3)+')';
+      ctx.fill();
+    }
+  }
+
+  function schedule() {
+    setTimeout(function(){
+      spawn();
+      if(Math.random()<0.35) spawn();
+      schedule();
+    }, 900+Math.random()*1400);
+  }
+  for(var s=0;s<3;s++) spawn();
+  schedule();
+
+  var last=0;
+  function draw(ts) {
+    requestAnimationFrame(draw);
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+    var dt=ts-last; last=ts;
+    for (var i=bolts.length-1; i>=0; i--) {
+      var b=bolts[i];
+      b.age+=dt;
+      var t=b.age/b.dur;
+      if(t>=1){bolts.splice(i,1);continue;}
+      // fade-in only; fade-out handled per-segment in drawPath
+      var alpha = (t < 0.10 ? t / 0.10 : 1) * 0.28;
+      var T_BOUNCE = 0.10, BOUNCE_DUR = 0.30;
+      var bouncePhase = -1;
+      if (t > T_BOUNCE && t < T_BOUNCE + BOUNCE_DUR) {
+        bouncePhase = (t - T_BOUNCE) / BOUNCE_DUR; // 0→1
+      }
+      var fwdShift = b.age * 0.004;
+      var fwdX = -b.bounceDir.dx * fwdShift;
+      var fwdY = -b.bounceDir.dy * fwdShift;
+      drawPath(b.pts, alpha, b.w, b.r, b.g, b.b, t, b.spreadVecs, bouncePhase, b.bounceDir, b.age, fwdX, fwdY);
+      // branches: uniform fade-out so they don't outlive the trunk
+      var brAlpha = t > 0.55 ? alpha * Math.max(0, 1 - (t - 0.55) / 0.45) : alpha;
+      drawBranches(b.branches, brAlpha, b.r, b.g, b.b);
+    }
+  }
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
