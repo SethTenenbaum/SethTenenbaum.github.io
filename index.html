@@ -771,8 +771,6 @@ function renderCard(grid, repo) {
     if (!raf) raf = requestAnimationFrame(tickCard);
   }
   card.addEventListener('mouseenter', () => {
-    card.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg)';
-    cRX = 0; cRY = 0;
     savedRect = card.getBoundingClientRect();
     document.removeEventListener('mousemove', onDocMove);
     document.addEventListener('mousemove', onDocMove);
