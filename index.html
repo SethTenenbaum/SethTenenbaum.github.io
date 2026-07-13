@@ -661,19 +661,24 @@ const LANG_COLORS = {
 };
 
 const FEATURED = {
-  'polygon-blackjack':       { desc: 'Fully on-chain Blackjack on Polygon using Chainlink VRF for provably fair randomness and UUPS upgradeable contracts. Includes a custom on-chain treasury that dynamically maintains liquidity for concurrent players. React / Next.js / TypeScript frontend with smooth card animations.', live: 'https://polygon-blackjack.vercel.app', hero: true, noGithub: true, language: 'TypeScript' },
+  'polygon-blackjack':       { desc: 'Fully on-chain Blackjack on Polygon using Chainlink VRF for provably fair randomness and UUPS upgradeable contracts. Includes a custom on-chain treasury that dynamically maintains liquidity for concurrent players. React / Next.js / TypeScript frontend with smooth card animations.', live: 'https://polygon-blackjack.vercel.app', github: 'https://github.com/SethTenenbaum/polygon-blackjack-vrf', hero: true, language: 'TypeScript', aliases: ['polygon-blackjack-vrf'] },
   'wadspa':                  { desc: 'Toolchain and runtime that compiles LADSPA and LV2 audio plugins (C/C++) to WebAssembly and publishes them as npm packages. Plugins run as AudioWorkletNodes in any modern browser. Ships 28 instruments and 32+ effects with a fully automated build pipeline and a header-only Qt shim for Qt-dependent DSP layers.', live: 'https://wadspa.github.io/wadspa/', orgUrl: 'https://github.com/wadspa/wadspa', language: 'JavaScript' },
+  'SoundBridge':             { desc: 'Native-to-browser audio bridge that lets websites host locally installed VST3, Audio Unit, and LV2 plugins in Web Audio graphs. A loopback WebSocket daemon and browser client support plugin scanning, presets, MIDI, automation, latency monitoring, and fail-dry recovery.', live: null, orgUrl: 'https://github.com/fourthtemple/SoundBridge', language: 'JavaScript' },
   'fbx-exporter':            { desc: 'From-scratch MIT-licensed binary FBX writer for browser and Node pipelines. Exports Three.js scenes to FBX preserving meshes, skeletal rigs, skinning, blend shape morphs, materials, textures, and baked animation curves. Round-trips through Blender and Three.js FBXLoader.', live: null, orgUrl: 'https://github.com/fourthtemple/fbx-exporter', language: 'JavaScript' },
-  'cleanup':                 { desc: 'Browser-based editor for cleaning up raw Mixamo FBX animations. Import FBX files into named animation folders, add and reposition custom bones, paint and redistribute skin weights, and edit FK/IK pose corrections and curve keys. Patches saved to browser-local storage.', live: 'https://fourthtemple.github.io/cleanup/', orgUrl: 'https://github.com/fourthtemple/cleanup', language: 'JavaScript' },
+  'cleanup':                 { desc: 'Browser-based editor for cleaning up raw Mixamo FBX animations. Imports FBX assets, adds and repositions custom bones, paints and redistributes skin weights, edits FK/IK poses and animation curves, and provides GPU-accelerated texture painting built with Three Shading Language (TSL). Exports cleaned characters and animations back to FBX with painted textures.', live: 'https://fourthtemple.github.io/cleanup/', orgUrl: 'https://github.com/fourthtemple/cleanup', language: 'JavaScript' },
   'rhythm-artist':           { desc: 'Browser-based beat-making tool with a step sequencer, per-note controls (velocity, pitch, offset, attack, delay, LFO wobble, dub echo), global EQ, per-track send/return delay and reverb, and audio loop chopping. Patterns serialize to JSON and can be driven live from a game via a public API. Zero build step — pure ES modules.', live: null, language: 'JavaScript' },
   'telekenetikitty':         { desc: 'Playable WebGL side-scroller prototype with two selectable humanoid cat heroes, platformer movement (walk, jump, duck), surreal painted forest atmosphere with parallax depth, and procedurally painted placeholder art.', live: null, language: 'JavaScript' },
   'iCloudClean':             { desc: 'Native macOS app for visualizing and cleaning iCloud Drive storage using an interactive squarified treemap. Concurrent scanning, delete/download queues, and app container scanning.', live: null },
-  'drummy-nsynth':           { desc: 'Synthesizes novel drum sounds using a Variational Autoencoder trained on the NSynth dataset, sampling the learned latent space of percussive instruments.', live: null },
+  'drummy-nsynth':           { desc: 'Synthesizes novel drum sounds using a Variational Autoencoder trained on the NSynth dataset, sampling the learned latent space of percussive instruments.', live: null, aliases: ['drummy'] },
   'bitcoin-decode-address':  { desc: 'Bitcoin chain explorer that decodes addresses across multiple encoding formats including Base58Check, Bech32, and P2SH.', live: null },
-  'gerizim-paper-a':         { desc: 'Statistical analysis framework for peer-reviewed archaeological research. Implements circular statistics, permutation tests, FDR correction, and NPC joint periodogram methods.', live: null },
+  'gerizim-paper-a':         { desc: 'Methods paper comparing Rayleigh circular-concentration tests with a geometric-null binomial probability test for monument longitudes near repeated harmonic grid lines. Using UNESCO, Wikidata, and OpenStreetMap corpora, it shows that phase concentration and harmonic-proximity enrichment can diverge.', live: null },
   'viem':                    { desc: 'Open-source contribution to Viem — the TypeScript library for Ethereum interaction used across the Web3 ecosystem.', live: null },
   'recon-extension':         { desc: 'Contributed to Recon Fuzz Tester, a security extension for Web3 smart contract analysis.', live: null },
 };
+
+function normalizeProjectId(value) {
+  return value.trim().toLowerCase();
+}
 
 async function loadRepos() {
   const grid = document.getElementById('projects-grid');
@@ -681,20 +686,32 @@ async function loadRepos() {
     const res = await fetch('https://api.github.com/users/SethTenenbaum/repos?sort=updated&per_page=100');
     const repos = await res.json();
     const featuredNames = Object.keys(FEATURED);
+    const featuredRepoNames = new Set(
+      featuredNames.flatMap(name => [name, ...(FEATURED[name].aliases || [])]).map(normalizeProjectId)
+    );
     const featured = featuredNames
       .map(name => {
-        const found = repos.find(r => r.name === name);
-        if (found) return found;
         const info = FEATURED[name];
+        const repoNames = [name, ...(info.aliases || [])];
+        const found = repoNames
+          .map(repoName => repos.find(r => normalizeProjectId(r.name) === normalizeProjectId(repoName)))
+          .find(Boolean);
+        if (found) return { ...found, name };
         // show org repos and hero cards that aren't in the personal API
         if (info.orgUrl || info.hero) return { name, html_url: info.orgUrl || null, language: info.language || null, stargazers_count: 0, fork: false, description: '' };
         return null;
       })
       .filter(Boolean);
     const others = repos
-      .filter(r => !featuredNames.includes(r.name) && !r.fork)
+      .filter(r => !featuredRepoNames.has(normalizeProjectId(r.name)) && !r.fork)
       .sort((a, b) => b.stargazers_count - a.stargazers_count);
-    const all = [...featured, ...others];
+    const seenProjects = new Set();
+    const all = [...featured, ...others].filter(repo => {
+      const projectId = normalizeProjectId(repo.name);
+      if (seenProjects.has(projectId)) return false;
+      seenProjects.add(projectId);
+      return true;
+    });
     grid.innerHTML = '';
     all.forEach(repo => renderCard(grid, repo));
   } catch (e) {
@@ -706,6 +723,7 @@ function renderCard(grid, repo) {
   const info = FEATURED[repo.name] || {};
   const desc = info.desc || repo.description || '';
   const live = info.live || repo.homepage || null;
+  const github = info.github || repo.html_url || null;
   const color = LANG_COLORS[repo.language] || '#8b8fa8';
   const isHero = !!info.hero;
 
@@ -713,7 +731,7 @@ function renderCard(grid, repo) {
   card.className = isHero ? 'card card-hero' : 'card';
 
   if (isHero) {
-    const showGithub = repo.html_url && !info.noGithub;
+    const showGithub = github && !info.noGithub;
     card.innerHTML = `
       <div class="card-hero-suits">
         <span class="blk">♠</span><span class="red">♥</span><span class="red">♦</span><span class="blk">♣</span>
@@ -722,7 +740,7 @@ function renderCard(grid, repo) {
         <div class="card-header">
           <h3>${repo.name}</h3>
           <div class="card-links">
-            ${showGithub ? `<a href="${repo.html_url}" target="_blank">GitHub</a>` : ''}
+            ${showGithub ? `<a href="${github}" target="_blank">GitHub</a>` : ''}
             ${live ? `<a href="${live}" target="_blank">Live ↗</a>` : ''}
           </div>
         </div>
@@ -738,7 +756,7 @@ function renderCard(grid, repo) {
       <div class="card-header">
         <h3>${repo.name}${repo.fork ? '<span class="fork-badge">fork</span>' : ''}</h3>
         <div class="card-links">
-          ${repo.html_url ? `<a href="${repo.html_url}" target="_blank">GitHub</a>` : ''}
+          ${github ? `<a href="${github}" target="_blank">GitHub</a>` : ''}
           ${live ? `<a href="${live}" target="_blank">Live ↗</a>` : ''}
         </div>
       </div>
