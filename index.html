@@ -666,7 +666,7 @@ const FEATURED = {
   'SoundBridge':             { desc: 'Native-to-browser audio bridge that lets websites host locally installed VST3, Audio Unit, and LV2 plugins in Web Audio graphs. A loopback WebSocket daemon and browser client support plugin scanning, presets, MIDI, automation, latency monitoring, and fail-dry recovery.', live: null, orgUrl: 'https://github.com/fourthtemple/SoundBridge', language: 'JavaScript' },
   'fbx-exporter':            { desc: 'From-scratch MIT-licensed binary FBX writer for browser and Node pipelines. Exports Three.js scenes to FBX preserving meshes, skeletal rigs, skinning, blend shape morphs, materials, textures, and baked animation curves. Round-trips through Blender and Three.js FBXLoader.', live: null, orgUrl: 'https://github.com/fourthtemple/fbx-exporter', language: 'JavaScript' },
   'cleanup':                 { desc: 'Browser-based editor for cleaning up raw Mixamo FBX animations. Imports FBX assets, adds and repositions custom bones, paints and redistributes skin weights, edits FK/IK poses and animation curves, and provides GPU-accelerated texture painting built with Three Shading Language (TSL). Exports cleaned characters and animations back to FBX with painted textures.', live: 'https://fourthtemple.github.io/cleanup/', orgUrl: 'https://github.com/fourthtemple/cleanup', language: 'JavaScript' },
-  'rhythm-artist':           { desc: 'Browser-based beat-making tool with a step sequencer, per-note controls (velocity, pitch, offset, attack, delay, LFO wobble, dub echo), global EQ, per-track send/return delay and reverb, and audio loop chopping. Patterns serialize to JSON and can be driven live from a game via a public API. Zero build step — pure ES modules.', live: null, language: 'JavaScript' },
+  'rhythm-artist':           { title: 'Rhythm Artist', desc: 'Browser-based music workstation combining a step sequencer, polyphonic piano roll, waveform and loop editor, automation lanes, sampler, mixing, instruments, and effects in one arrangement view. Hosts 142 WebAssembly audio plugins through AudioWorklets and supports Web MIDI recording, sidechains, parameter automation, browser-local projects, JSON interchange, WAV rendering, and a public runtime API for games.', live: null, github: 'https://github.com/SethTenenbaum/rhythm-artist', language: 'JavaScript' },
   'telekenetikitty':         { desc: 'Playable WebGL side-scroller prototype with two selectable humanoid cat heroes, platformer movement (walk, jump, duck), surreal painted forest atmosphere with parallax depth, and procedurally painted placeholder art.', live: null, language: 'JavaScript' },
   'iCloudClean':             { desc: 'Native macOS app for visualizing and cleaning iCloud Drive storage using an interactive squarified treemap. Concurrent scanning, delete/download queues, and app container scanning.', live: null },
   'drummy-nsynth':           { desc: 'Synthesizes novel drum sounds using a Variational Autoencoder trained on the NSynth dataset, sampling the learned latent space of percussive instruments.', live: null, aliases: ['drummy'] },
@@ -697,8 +697,8 @@ async function loadRepos() {
           .map(repoName => repos.find(r => normalizeProjectId(r.name) === normalizeProjectId(repoName)))
           .find(Boolean);
         if (found) return { ...found, name };
-        // show org repos and hero cards that aren't in the personal API
-        if (info.orgUrl || info.hero) return { name, html_url: info.orgUrl || null, language: info.language || null, stargazers_count: 0, fork: false, description: '' };
+        // Show explicitly linked projects even when they are absent from the public API.
+        if (info.github || info.orgUrl || info.hero) return { name, html_url: info.github || info.orgUrl || null, language: info.language || null, stargazers_count: 0, fork: false, description: '' };
         return null;
       })
       .filter(Boolean);
@@ -721,6 +721,7 @@ async function loadRepos() {
 
 function renderCard(grid, repo) {
   const info = FEATURED[repo.name] || {};
+  const title = info.title || repo.name;
   const desc = info.desc || repo.description || '';
   const live = info.live || repo.homepage || null;
   const github = info.github || repo.html_url || null;
@@ -738,7 +739,7 @@ function renderCard(grid, repo) {
       </div>
       <div class="card-body">
         <div class="card-header">
-          <h3>${repo.name}</h3>
+          <h3>${title}</h3>
           <div class="card-links">
             ${showGithub ? `<a href="${github}" target="_blank">GitHub</a>` : ''}
             ${live ? `<a href="${live}" target="_blank">Live ↗</a>` : ''}
@@ -754,7 +755,7 @@ function renderCard(grid, repo) {
   } else {
     card.innerHTML = `
       <div class="card-header">
-        <h3>${repo.name}${repo.fork ? '<span class="fork-badge">fork</span>' : ''}</h3>
+        <h3>${title}${repo.fork ? '<span class="fork-badge">fork</span>' : ''}</h3>
         <div class="card-links">
           ${github ? `<a href="${github}" target="_blank">GitHub</a>` : ''}
           ${live ? `<a href="${live}" target="_blank">Live ↗</a>` : ''}
